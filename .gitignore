@@ -12,10 +12,6 @@ node_modules
 server/prisma/*.db
 server/prisma/generated
 
-# local-only docs
-Project.md
-DP.md
-
 # deployment artifacts
 server-deploy.zip
 web-deploy.zip
