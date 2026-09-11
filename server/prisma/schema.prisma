@@ -1,0 +1,74 @@
+// Prisma schema for the Online Library Management System.
+//
+// Provider is SQL Server so the same schema targets both local SQL Server /
+// Azure SQL Edge and Azure SQL Database in the cloud. The connection string
+// comes from DATABASE_URL (App Service application setting / Key Vault in Azure,
+// server/.env locally).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  name         String
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  role         String      @default("MEMBER") // MEMBER | ADMIN
+  createdAt    DateTime    @default(now()) @map("created_at")
+  borrowings   Borrowing[]
+  addedBooks   Book[]      @relation("BooksAddedBy")
+
+  @@map("users")
+}
+
+// The library's own catalog. Populated by an admin via the "add book" flow:
+// metadata is pulled from the Open Library API, the cover image is downloaded
+// and re-uploaded to our Azure Blob Storage, and `coverBlobUrl` points at our
+// copy (never the external URL).
+model Book {
+  id               Int         @id @default(autoincrement())
+  openLibraryKey   String      @unique @map("open_library_key") // e.g. "/works/OL27482W"
+  title            String
+  author           String?
+  description      String?     @db.NVarChar(Max)
+  genre            String?
+  isbn             String?
+  firstPublishYear Int?        @map("first_publish_year")
+  coverBlobUrl     String?     @map("cover_blob_url")
+  addedByUserId    Int         @map("added_by_user_id")
+  createdAt        DateTime    @default(now()) @map("created_at")
+
+  addedBy    User        @relation("BooksAddedBy", fields: [addedByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  borrowings Borrowing[]
+
+  @@index([title])
+  @@index([genre])
+  @@map("books")
+}
+
+// One row per borrow event, kept for its whole lifecycle:
+//   BORROWED  -> returnedAt is null, still on loan
+//   RETURNED  -> returnedAt set, row retained as history
+model Borrowing {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  bookId     Int       @map("book_id")
+  borrowedAt DateTime  @default(now()) @map("borrowed_at")
+  dueDate    DateTime  @map("due_date")
+  returnedAt DateTime? @map("returned_at")
+  status     String    @default("BORROWED") // BORROWED | RETURNED
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  // "list my active loans" / "list my history" are the hot queries.
+  @@index([userId, status])
+  @@index([bookId, status])
+  @@map("borrowings")
+}
