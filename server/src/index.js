@@ -8,10 +8,10 @@ import bookRoutes from "./routes/bookRoutes.js";
 
 const app = express();
 
-// TRUST THE REVERSE PROXY SO REQUEST PROTOCOL AND CLIENT IP ARE DETECTED CORRECTLY.
+// TRUST THE REVERSE PROXY SO REQUEST PROTOCOL AND CLIENT IP ARE DETECTED CORRECTLY
 app.set("trust proxy", 1);
 
-// READ ALLOWED CORS ORIGINS FROM CLIENT_ORIGIN WITH LOCAL DEVELOPMENT DEFAULTS.
+// READ ALLOWED CORS ORIGINS FROM CLIENT_ORIGIN WITH LOCAL DEVELOPMENT DEFAULTS
 const allowedOrigins = (
   process.env.CLIENT_ORIGIN || "http://localhost:3000,http://localhost:3001"
 )
@@ -30,7 +30,7 @@ app.use(
 );
 app.use(express.json());
 
-// CHECK DATABASE CONNECTIVITY FOR THE APP SERVICE HEALTH PROBE.
+// CHECK DATABASE CONNECTIVITY FOR THE APP SERVICE HEALTH
 app.get("/api/health", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
